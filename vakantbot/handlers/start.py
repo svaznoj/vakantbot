@@ -34,18 +34,18 @@ Botimizdan to'liq foydalanish va vakansiya e'lonlarini joylashtirish uchun quyid
         await message.answer(text, parse_mode="HTML", reply_markup=get_subscription_keyboard(missing))
         return
 
-    # Asosiy xush kelibsiz xabari
-    text = f"""🤖 <b>Assalomu alaykum, {message.from_user.first_name}!</b>
+    # Asosiy xush kelibsiz xabari (Haqiqiy Telegram Premium Custom Emojilar bilan)
+    text = f"""<tg-emoji emoji-id="5458910988063490081">✨</tg-emoji> <b>Assalomu alaykum, {message.from_user.first_name}!</b>
 
 Men — <b>Vakansiya E'lon Bot</b>iman.
 
-Katta auditoriyaga ega kanallarimizga ish vakansiyalarini tez va avtomatlashtirilgan tarzda joylashtirishingiz mumkin.
+<tg-emoji emoji-id="5458603970916270333">📢</tg-emoji> Katta auditoriyaga ega kanallarimizga ish vakansiyalarini tez va avtomatlashtirilgan tarzda joylashtirishingiz mumkin.
 
-✨ <b>Imkoniyatlarimiz:</b>
-✅ Ma'lumotlarni bosqichma-bosqich qulay kiritish
-✅ O'z rasmingizni yoki umumiy bannerimizni biriktirish
-✅ @humocardbot / Karta orqali <b>100% AVTO to'lov</b>
-✅ Navbat bo'yicha e'lonni kanallarga avtomatik chiqarish
+<tg-emoji emoji-id="5458910988063490081">✨</tg-emoji> <b>Bizning imkoniyatlarimiz:</b>
+<tg-emoji emoji-id="5458660222102945723">🔥</tg-emoji> <b>Tayyor reklama:</b> Bitta xabarda srazi joylashtirish
+<tg-emoji emoji-id="5837003105228558796">📝</tg-emoji> <b>Savol-javob:</b> Bosqichma-bosqich tartibli e'lon yaratish
+<tg-emoji emoji-id="5220195537520711716">⚡️</tg-emoji> <b>Avto to'lov:</b> @humocardbot / SMS orqali 100% avto tekshiruv
+<tg-emoji emoji-id="5188481279963715781">🚀</tg-emoji> <b>Tezkor navbat:</b> Har 5 daqiqada kanallarga avto chiqarish
 
 Quyidagi menyudan kerakli bo'limni tanlang 👇"""
 
