@@ -18,7 +18,7 @@ from database import (
 from keyboards.inline import (
     channels_selection_kb, job_types_kb, confirm_vacancy_kb,
     edit_fields_kb, payment_kb, skip_kb, back_to_menu_kb,
-    photo_choice_kb, admin_payment_kb
+    photo_choice_kb, admin_payment_kb, post_mode_kb
 )
 from handlers.states import VacancyForm
 from utils.formatter import (
@@ -130,6 +130,78 @@ async def channels_selected(callback: CallbackQuery, state: FSMContext):
         total_price=exact_amount
     )
 
+    await state.set_state(VacancyForm.post_mode_choice)
+    text = """🎯 <b>E'LON BERISh USULINI TANLANG:</b>
+
+1️⃣ <b>🚀 Tayyor reklamam bor</b>
+Agar sizda tayyor e'lon matni yoki rasmli post bo'lsa, uni to'g'ridan-to'g'ri bitta xabarda yuborishingiz yoki boshqa kanaldan forward qilishingiz mumkin!
+
+2️⃣ <b>📝 Bosqichma-bosqich to'ldirish</b>
+Bot savollariga (kompaniya, maosh, talablar) birma-bir javob berasiz va bot tartibli vakansiya yaratadi.
+
+👇 Qaysi usul sizga ma'qul?"""
+
+    await callback.message.edit_text(text.strip(), parse_mode="HTML", reply_markup=post_mode_kb())
+    await callback.answer()
+
+
+# ==================== 1-USUL: TAYYOR REKLAMANI QABUL QILISH ====================
+
+@router.callback_query(VacancyForm.post_mode_choice, F.data == "mode_ready_post")
+async def mode_ready_post_start(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(VacancyForm.waiting_ready_post)
+    text = """🚀 <b>TAYYOR REKLAMANGIZNI YUBORING!</b>
+
+Quyidagilardan birini yuborishingiz mumkin:
+• 📸 <b>Rasmli post</b> (rasm va uning tagida to'liq matn)
+• 📄 <b>Faqat matnli xabar</b>
+• 🔄 Yoki boshqa kanalingizdagi tayyor postni shunchaki shu yerga <b>Forward</b> qiling!
+
+👇 Reklamangizni yuboring:"""
+    await callback.message.edit_text(text, parse_mode="HTML", reply_markup=skip_kb("ready_post"))
+    await callback.answer()
+
+
+@router.message(VacancyForm.waiting_ready_post, F.photo)
+async def process_ready_post_photo(message: Message, state: FSMContext):
+    """Tayyor rasmli post qabul qilish."""
+    data = await state.get_data()
+    vacancy_id = data.get("vacancy_id")
+    photo = message.photo[-1]
+    text = message.caption or "Vakansiya e'loni"
+
+    update_vacancy(
+        vacancy_id,
+        photo_file_id=photo.file_id,
+        formatted_text=text,
+        company_name="Tayyor reklama",
+        job_type="Vakansiya",
+        use_default_photo=0
+    )
+    await show_preview(message, state)
+
+
+@router.message(VacancyForm.waiting_ready_post, F.text)
+async def process_ready_post_text(message: Message, state: FSMContext):
+    """Tayyor matnli post qabul qilish."""
+    data = await state.get_data()
+    vacancy_id = data.get("vacancy_id")
+
+    update_vacancy(
+        vacancy_id,
+        photo_file_id=None,
+        formatted_text=message.text.strip(),
+        company_name="Tayyor reklama",
+        job_type="Vakansiya",
+        use_default_photo=0
+    )
+    await show_preview(message, state)
+
+
+# ==================== 2-USUL: BOSQICHMA-BOSQICH (SAVOL-JAVOB) ====================
+
+@router.callback_query(VacancyForm.post_mode_choice, F.data == "mode_wizard_post")
+async def mode_wizard_post_start(callback: CallbackQuery, state: FSMContext):
     await state.set_state(VacancyForm.company_name)
     text = """🏢 <b>Kompaniya / Tashkilot nomi</b>
 

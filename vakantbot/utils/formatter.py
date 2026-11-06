@@ -30,6 +30,10 @@ ICONS = {
 def format_vacancy(data: dict) -> str:
     """Vakansiya e'lonini chiroyli va hashamatli formatda tayyorlash."""
 
+    # Agar foydalanuvchi tayyor reklama yuborgan bo'lsa
+    if data.get("company_name") == "Tayyor reklama" and data.get("formatted_text"):
+        return data["formatted_text"]
+
     company = data.get('company_name', '—')
     job_type = data.get('job_type', '—')
     workers = data.get('workers_count', '—')

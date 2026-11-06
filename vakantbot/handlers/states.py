@@ -5,6 +5,10 @@ from aiogram.fsm.state import State, StatesGroup
 class VacancyForm(StatesGroup):
     """E'lon yaratish bosqichlari."""
     selecting_channels = State()
+    post_mode_choice = State()       # Tayyor reklama yoki savol-javob tanlovi
+    waiting_ready_post = State()     # Tayyor reklamani bitta xabarda qabul qilish
+    
+    # Bosqichma-bosqich yaratish
     company_name = State()
     job_type = State()
     workers_count = State()
@@ -14,8 +18,10 @@ class VacancyForm(StatesGroup):
     phone = State()
     requirements = State()
     additional_info = State()
-    photo_choice = State()       # O'z rasmi yoki umumiy yoki rasmsiz
-    waiting_custom_photo = State() # Foydalanuvchi rasm yuborishi kutilmoqda
+    photo_choice = State()           # O'z rasmi yoki umumiy yoki rasmsiz
+    waiting_custom_photo = State()   # Foydalanuvchi rasm yuborishi kutilmoqda
+    
+    # Yakuniy ko'rish va to'lov
     preview = State()
     editing_field = State()
     waiting_payment = State()
