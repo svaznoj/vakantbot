@@ -353,6 +353,43 @@ async def adm_card_save_name(message: Message, state: FSMContext):
 
 # ==================== TO'LOVNI TASDIQLASH VA RAD ETISH ====================
 
+@router.callback_query(F.data.startswith("admin_approve_and_post_"))
+async def admin_approve_and_post_now(callback: CallbackQuery, bot: Bot):
+    """To'lovni tasdiqlab, DARHOL barcha kanallarga chiqarish."""
+    if not is_admin(callback.from_user.id):
+        await callback.answer("⛔ Ruxsat yo'q!", show_alert=True)
+        return
+
+    vacancy_id = int(callback.data.replace("admin_approve_and_post_", ""))
+    vacancy = get_vacancy(vacancy_id)
+    if not vacancy:
+        await callback.answer("❌ E'lon topilmadi!", show_alert=True)
+        return
+
+    update_vacancy(
+        vacancy_id,
+        status="queued",
+        payment_confirmed_at=datetime.now().isoformat(),
+        payment_confirmed_by=callback.from_user.id,
+        payment_note=f"Qo'lda tasdiqladi va hozir chiqardi: {callback.from_user.full_name}"
+    )
+
+    scheduler = PostScheduler(bot)
+    res = await scheduler.post_immediately(vacancy_id)
+
+    caption = callback.message.caption or callback.message.text or ""
+    try:
+        status_text = "✅ <b>TASDIQLANDI VA HOZIR KANALGA CHIQARILDI! 🚀</b>" if res else "✅ <b>TASDIQLANDI (Navbatga qo'yildi)</b>"
+        if callback.message.photo:
+            await callback.message.edit_caption(caption=caption + f"\n\n{status_text} ({callback.from_user.full_name})", parse_mode="HTML")
+        else:
+            await callback.message.edit_text(text=caption + f"\n\n{status_text} ({callback.from_user.full_name})", parse_mode="HTML")
+    except Exception:
+        pass
+
+    await callback.answer("🚀 Kanalga chiqarildi!")
+
+
 @router.callback_query(F.data.startswith("admin_approve_"))
 async def admin_approve_payment(callback: CallbackQuery, bot: Bot):
     if not is_admin(callback.from_user.id):
@@ -485,13 +522,18 @@ async def admin_queue_list(callback: CallbackQuery):
     count = get_queue_count()
     text = f"📋 <b>Navbatdagi e'lonlar (Jami: {count} ta kanal navbati):</b>\n\n"
 
+    buttons = []
     if not queued:
-        text += "<i>Hozircha navbatda e'lonlar yo'q.</i>"
+        text += "<i>Hozircha navbatda e'lonlar yo'q. Kanal bo'sh!</i>"
     else:
-        for v in queued[:15]:
+        for v in queued[:10]:
             text += f"📌 <code>#{v['id']}</code> — <b>{v.get('company_name', 'Nomsiz')}</b> ({v.get('job_type', '—')})\n"
+            buttons.append([
+                InlineKeyboardButton(text=f"🚀 #{v['id']} ni HOZIR chiqarish", callback_data=f"admin_post_now_btn_{v['id']}")
+            ])
 
-    await callback.message.edit_text(text, parse_mode="HTML", reply_markup=admin_menu_kb())
+    buttons.append([InlineKeyboardButton(text="⬅️ Admin panelga qaytish", callback_data="admin_main")])
+    await callback.message.edit_text(text, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
     await callback.answer()
 
 

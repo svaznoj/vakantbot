@@ -1,32 +1,34 @@
-"""Vakansiya e'lonini premium ko'rinishda formatlash."""
+"""Vakansiya e'lonini premium hashamatli ko'rinishda formatlash."""
 import json
 from database import get_setting, get_posting_channels
 
-# Zamonaviy premium emojilar va belgilar
+# Premium estetik emojilar va belgilar
 ICONS = {
-    "star": "✨",
+    "star": "⭐",
     "fire": "🔥",
     "pin": "📍",
     "briefcase": "💼",
     "company": "🏢",
     "team": "👥",
-    "money": "💰",
-    "clock": "⏰",
-    "phone": "📞",
-    "doc": "📋",
-    "info": "ℹ️",
+    "money": "💵",
+    "clock": "⏳",
+    "phone": "📲",
+    "doc": "📝",
+    "info": "📌",
     "rocket": "🚀",
     "check": "✅",
     "cross": "❌",
     "card": "💳",
     "warning": "⚠️",
     "bell": "🔔",
-    "sparkles": "🌟",
+    "sparkles": "✨",
+    "diamond": "💎",
+    "crown": "👑",
 }
 
 
 def format_vacancy(data: dict) -> str:
-    """Vakansiya e'lonini chiroyli va qulay formatda tayyorlash."""
+    """Vakansiya e'lonini chiroyli va hashamatli formatda tayyorlash."""
 
     company = data.get('company_name', '—')
     job_type = data.get('job_type', '—')
@@ -38,23 +40,23 @@ def format_vacancy(data: dict) -> str:
     requirements = data.get('requirements')
     additional_info = data.get('additional_info')
 
-    text = f"""🔥 <b>VAKANSIYA: {job_type.upper()}</b>
+    text = f"""👑 <b>ISh O'RNI: {job_type.upper()}</b>
 
-{ICONS['company']} <b>Tashkilot / Kompaniya:</b> <code>{company}</code>
-{ICONS['briefcase']} <b>Yo'nalish:</b> {job_type}
-{ICONS['team']} <b>Talab qilinadigan xodimlar:</b> {workers}
-{ICONS['money']} <b>Oylik maosh:</b> <b>{salary}</b>
-{ICONS['clock']} <b>Ish tartibi:</b> {schedule}
-{ICONS['pin']} <b>Manzil:</b> {address}
-{ICONS['phone']} <b>Aloqa:</b> <code>{phone}</code>"""
+💎 <b>Kompaniya:</b> <code>{company}</code>
+💼 <b>Vakansiya:</b> {job_type}
+👥 <b>Kerakli xodimlar:</b> {workers}
+💵 <b>Oylik maosh:</b> <b>{salary}</b>
+⏳ <b>Ish tartibi:</b> {schedule}
+📍 <b>Manzil:</b> {address}
+📲 <b>Bog'lanish:</b> <code>{phone}</code>"""
 
     if requirements:
-        text += f"""\n\n{ICONS['doc']} <b>Talablar:</b>\n{requirements}"""
+        text += f"""\n\n📝 <b>Talablar:</b>\n{requirements}"""
 
     if additional_info:
-        text += f"""\n\n{ICONS['info']} <b>Qo'shimcha ma'lumot:</b>\n{additional_info}"""
+        text += f"""\n\n📌 <b>Qo'shimcha ma'lumot:</b>\n{additional_info}"""
 
-    text += f"""\n\n━━━━━━━━━━━━━━━━━━━━━━\n{ICONS['rocket']} <i>Bog'lanish uchun yuqoridagi raqamga murojaat qiling!</i>"""
+    text += f"""\n\n━━━━━━━━━━━━━━━━━━━━━━\n🚀 <i>Murojaat uchun yuqoridagi raqamga qo'ng'iroq qiling yoki yozing!</i>"""
 
     return text.strip()
 
@@ -94,7 +96,7 @@ def format_vacancy_preview(data: dict, selected_channels: list) -> str:
 {channels_info if channels_info else '  <i>(Hech qanday kanal tanlanmagan)</i>'}
 💳 <b>To'lov summasi:</b> <b>{exact_formatted} UZS</b>
 
-{ICONS['check']} <i>Hammasi to'g'ri bo'lsa, tasdiqlang yoki tahrirlang:</i>"""
+✅ <i>Hammasi to'g'ri bo'lsa, tasdiqlang yoki tahrirlang:</i>"""
 
     return text.strip()
 
@@ -112,11 +114,11 @@ def format_payment_info(exact_amount: int, vacancy_id: int) -> str:
 📌 E'lon raqami: <code>#{vacancy_id}</code>
 
 ⚡️ <b>O'TKAZISHINGIZ KERAK BO'LGAN ANIQ SUMMA:</b>
-👉 <b><code>{exact_amount}</code></b> so'm (yoki <code>{exact_formatted} UZS</code>)
+👉 <b><code>{exact_amount}</code></b> so'm (<code>{exact_formatted} UZS</code>)
 
 ⚠️ <b>DIQQAT! TO'LOV AVTO TASDIQLANISHI UCHUN:</b>
 Aynan <b><code>{exact_amount}</code> so'm</b> o'tkazishingiz shart! 
-<i>(Masalan, oddiy 50 000 emas, balki aynan oxiridagi so'mlarigacha aniq o'tkazing, tizim to'lovni avtomat darhol tanib oladi!)</i>
+<i>(Tizim ushbu unikal summa orqali to'lovingizni 100% avtomatik aniqlaydi!)</i>
 
 ━━━━━━━━━━━━━━━━━━━━━━
 💳 <b>Karta raqami:</b>
@@ -125,10 +127,10 @@ Aynan <b><code>{exact_amount}</code> so'm</b> o'tkazishingiz shart!
 👤 <b>Qabul qiluvchi:</b> {holder}
 ━━━━━━━━━━━━━━━━━━━━━━
 
-🤖 <b>TO'LOVNI TEKSHIRISH:</b>
+🤖 <b>AVTO TEKSHIRUV:</b>
 1. Pulni o'tkazing (Click, Payme, Uzum va h.k.).
-2. Pul tushgach, pastdagi <b>«⚡️ To'lovni tekshirish»</b> tugmasini bosing yoki chek rasmini yuboring.
-3. @humocardbot / SMS bildirishnomasi orqali to'lov <b>AVTOMATIK</b> tasdiqlanadi va e'lon navbatga qo'yiladi!"""
+2. Pul tushgach, @humocardbot dan kelgan SMS/chek matnini shu yerga yuboring yoki pastdagi <b>«⚡️ To'lovni tekshirish»</b> tugmasini bosing!
+3. To'lov <b>AVTOMATIK</b> tasdiqlanadi va e'lon navbatga qo'yiladi!"""
 
     return text.strip()
 

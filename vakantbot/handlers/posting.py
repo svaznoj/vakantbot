@@ -4,8 +4,8 @@ import logging
 from datetime import datetime
 
 from aiogram import Router, F, Bot
-from aiogram.types import Message, CallbackQuery
-from aiogram.filters import Command
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 
 from config import ADMIN_IDS, JOB_TYPES
@@ -27,6 +27,7 @@ from utils.formatter import (
 )
 from utils.subscription import check_user_subscriptions, get_subscription_keyboard
 from utils.payment_parser import extract_payment_amount
+from utils.scheduler import PostScheduler
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -36,8 +37,6 @@ router = Router()
 
 @router.callback_query(F.data == "new_post")
 async def start_new_post(callback: CallbackQuery, state: FSMContext, bot: Bot):
-    """Yangi e'lon berish boshlanishi."""
-    # Majburiy obunani tekshirish
     is_sub, missing = await check_user_subscriptions(bot, callback.from_user.id)
     if not is_sub:
         await callback.message.edit_text(
@@ -67,7 +66,6 @@ Bir yoki bir nechta kanalni tanlashingiz mumkin:"""
 
 @router.message(Command("post"))
 async def start_new_post_cmd(message: Message, state: FSMContext, bot: Bot):
-    """Komanda orqali boshlash."""
     is_sub, missing = await check_user_subscriptions(bot, message.from_user.id)
     if not is_sub:
         await message.answer(
@@ -97,7 +95,6 @@ Bir yoki bir nechta kanalni tanlashingiz mumkin:"""
 
 @router.callback_query(VacancyForm.selecting_channels, F.data.startswith("toggle_ch_"))
 async def toggle_channel(callback: CallbackQuery, state: FSMContext):
-    """Kanal tanlash yoki olib tashlash."""
     channel_key = callback.data.replace("toggle_ch_", "")
     data = await state.get_data()
     selected = data.get("selected_channels", [])
@@ -114,7 +111,6 @@ async def toggle_channel(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(VacancyForm.selecting_channels, F.data == "channels_done")
 async def channels_selected(callback: CallbackQuery, state: FSMContext):
-    """Kanal tanlash yakunlandi -> narx va unikal to'lov summasi hisoblanadi."""
     data = await state.get_data()
     selected = data.get("selected_channels", [])
 
@@ -321,7 +317,6 @@ async def process_additional_info(message: Message, state: FSMContext):
 # ==================== RASM VA BANNER TANLOVI ====================
 
 async def ask_photo_choice(message, state: FSMContext, is_edit: bool = False):
-    """Foydalanuvchidan rasm turini so'rash."""
     text = """🖼 <b>E'lon uchun rasm / reklama banneri</b>
 
 E'loningiz qanday ko'rinishda bo'lishini xohlaysiz?
@@ -341,7 +336,6 @@ E'loningiz qanday ko'rinishda bo'lishini xohlaysiz?
 
 @router.callback_query(VacancyForm.photo_choice, F.data == "photo_upload_custom")
 async def handle_photo_custom(callback: CallbackQuery, state: FSMContext):
-    """O'z rasmini yuklashni tanlaganda."""
     await state.set_state(VacancyForm.waiting_custom_photo)
     text = "📸 <b>Iltimos, e'lon uchun rasmni (banner) yuboring:</b>"
     await callback.message.edit_text(text, parse_mode="HTML", reply_markup=skip_kb("custom_photo"))
@@ -350,7 +344,6 @@ async def handle_photo_custom(callback: CallbackQuery, state: FSMContext):
 
 @router.message(VacancyForm.waiting_custom_photo, F.photo)
 async def process_custom_photo(message: Message, state: FSMContext):
-    """Foydalanuvchi yuborgan rasmni qabul qilish."""
     photo = message.photo[-1]
     data = await state.get_data()
     update_vacancy(
@@ -363,7 +356,6 @@ async def process_custom_photo(message: Message, state: FSMContext):
 
 @router.callback_query(VacancyForm.waiting_custom_photo, F.data == "skip_custom_photo")
 async def skip_custom_photo(callback: CallbackQuery, state: FSMContext):
-    """Rasmni o'tkazib yuborish."""
     data = await state.get_data()
     update_vacancy(data["vacancy_id"], photo_file_id=None, use_default_photo=0)
     await show_preview(callback.message, state, is_edit=True)
@@ -372,7 +364,6 @@ async def skip_custom_photo(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(VacancyForm.photo_choice, F.data == "photo_use_default")
 async def handle_photo_default(callback: CallbackQuery, state: FSMContext):
-    """Umumiy bannerni tanlaganda."""
     data = await state.get_data()
     update_vacancy(data["vacancy_id"], photo_file_id=None, use_default_photo=1)
     await show_preview(callback.message, state, is_edit=True)
@@ -381,7 +372,6 @@ async def handle_photo_default(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(VacancyForm.photo_choice, F.data == "photo_skip")
 async def handle_photo_skip(callback: CallbackQuery, state: FSMContext):
-    """Faqat matnni tanlaganda."""
     data = await state.get_data()
     update_vacancy(data["vacancy_id"], photo_file_id=None, use_default_photo=0)
     await show_preview(callback.message, state, is_edit=True)
@@ -391,7 +381,6 @@ async def handle_photo_skip(callback: CallbackQuery, state: FSMContext):
 # ==================== PREVIEW VA TASDIQLASH ====================
 
 async def show_preview(message, state: FSMContext, is_edit: bool = False):
-    """E'lon ko'rinishini ko'rsatish."""
     data = await state.get_data()
     vacancy = get_vacancy(data["vacancy_id"])
     if not vacancy:
@@ -410,7 +399,6 @@ async def show_preview(message, state: FSMContext, is_edit: bool = False):
     default_banner = get_setting("default_banner_file_id", "")
     banner_to_show = photo_id or (default_banner if vacancy.get("use_default_photo") else None)
 
-    # Agar rasm bo'lsa send_photo bilan ko'rsatamiz
     if banner_to_show:
         try:
             await message.answer_photo(
@@ -431,7 +419,6 @@ async def show_preview(message, state: FSMContext, is_edit: bool = False):
 
 @router.callback_query(VacancyForm.preview, F.data == "confirm_vacancy")
 async def confirm_vacancy(callback: CallbackQuery, state: FSMContext):
-    """E'lonni tasdiqlab, to'lov sahifasiga o'tish."""
     data = await state.get_data()
     vacancy = get_vacancy(data["vacancy_id"])
 
@@ -441,15 +428,12 @@ async def confirm_vacancy(callback: CallbackQuery, state: FSMContext):
         await callback.answer()
         return
 
-    # Holatni to'lov kutilmoqda rejimiga o'tkazish
     update_vacancy(vacancy["id"], status="pending_payment")
-
     exact_amount = vacancy.get("exact_amount") or vacancy.get("total_price") or 0
     payment_text = format_payment_info(exact_amount, vacancy["id"])
 
     await state.set_state(VacancyForm.waiting_payment)
 
-    # Agar xabar fotosurat bilan bo'lsa, edit_caption qilamiz
     if callback.message.photo:
         await callback.message.edit_caption(
             caption=payment_text,
@@ -526,7 +510,6 @@ async def process_edit_field(message: Message, state: FSMContext):
 
 @router.callback_query(F.data.startswith("check_payment_"))
 async def check_payment_callback(callback: CallbackQuery, bot: Bot):
-    """Foydalanuvchi '⚡️ To'lovni tekshirish' tugmasini bosganda."""
     vacancy_id = int(callback.data.replace("check_payment_", ""))
     vacancy = get_vacancy(vacancy_id)
 
@@ -534,12 +517,17 @@ async def check_payment_callback(callback: CallbackQuery, bot: Bot):
         await callback.answer("❌ E'lon topilmadi!", show_alert=True)
         return
 
-    # Agar allaqachon tasdiqlangan bo'lsa
     if vacancy["status"] in ["queued", "posted"]:
+        queue_count = get_queue_count()
+        buttons = []
+        if queue_count <= 1:
+            buttons.append([InlineKeyboardButton(text="🚀 Hozir kanalga chiqarish", callback_data=f"user_post_now_{vacancy_id}")])
+        buttons.append([InlineKeyboardButton(text="🏠 Bosh menyu", callback_data="main_menu")])
+
         await callback.message.edit_text(
-            f"🎉 <b>To'lov tasdiqlangan!</b>\n\nE'loningiz <code>#{vacancy_id}</code> navbatga qo'yilgan va tez orada kanalga joylanadi.",
+            f"🎉 <b>To'lov tasdiqlangan!</b>\n\nE'loningiz <code>#{vacancy_id}</code> navbatga qo'yilgan.",
             parse_mode="HTML",
-            reply_markup=back_to_menu_kb()
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
         )
         await callback.answer("✅ To'lov allaqachon tasdiqlangan!")
         return
@@ -553,7 +541,6 @@ async def check_payment_callback(callback: CallbackQuery, bot: Bot):
 
 @router.callback_query(F.data.startswith("send_receipt_"))
 async def send_receipt_start(callback: CallbackQuery, state: FSMContext):
-    """Chek screenshotini yuborish rejimiga o'tish."""
     vacancy_id = int(callback.data.replace("send_receipt_", ""))
     await state.update_data(vacancy_id=vacancy_id)
     await state.set_state(VacancyForm.sending_receipt)
@@ -569,7 +556,6 @@ async def send_receipt_start(callback: CallbackQuery, state: FSMContext):
 
 @router.message(VacancyForm.sending_receipt, F.photo)
 async def process_receipt_photo(message: Message, state: FSMContext, bot: Bot):
-    """Foydalanuvchi chek rasmini yuborganda."""
     data = await state.get_data()
     vacancy_id = data.get("vacancy_id")
     vacancy = get_vacancy(vacancy_id)
@@ -595,12 +581,20 @@ async def process_receipt_photo(message: Message, state: FSMContext, bot: Bot):
         reply_markup=back_to_menu_kb()
     )
 
-    # Adminlarga yuborish
+    # Adminlarga yuborish (Tasdiqlash va Hozir chiqarish tugmalari bilan)
     user_info = {
         "full_name": message.from_user.full_name,
         "username": message.from_user.username
     }
     admin_text = format_admin_notification(vacancy, user_info)
+
+    admin_btns = [
+        [
+            InlineKeyboardButton(text="✅ Tasdiqlash", callback_data=f"admin_approve_{vacancy_id}"),
+            InlineKeyboardButton(text="🚀 Tasdiqlab, HOZIR chiqarish", callback_data=f"admin_approve_and_post_{vacancy_id}"),
+        ],
+        [InlineKeyboardButton(text="❌ Rad etish", callback_data=f"admin_reject_{vacancy_id}")],
+    ]
 
     for admin_id in ADMIN_IDS:
         try:
@@ -609,7 +603,7 @@ async def process_receipt_photo(message: Message, state: FSMContext, bot: Bot):
                 photo=photo.file_id,
                 caption=admin_text,
                 parse_mode="HTML",
-                reply_markup=admin_payment_kb(vacancy_id)
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=admin_btns)
             )
         except Exception as e:
             logger.error(f"Admin {admin_id} ga chek yuborishda xatolik: {e}")
@@ -618,13 +612,12 @@ async def process_receipt_photo(message: Message, state: FSMContext, bot: Bot):
     await state.clear()
 
 
-# ==================== @humocardbot VA TO'LOV BILDIRIShNOMALARI (AVTO USHLASH) ====================
+# ==================== @humocardbot VA TO'LOV BILDIRIShNOMALARI (HAR QANDAY HOLATDA AVTO USHLASH) ====================
 
-@router.message(~F.text.startswith("/"), F.text | F.caption)
-async def handle_auto_payment_text(message: Message, bot: Bot):
+@router.message(StateFilter("*"), ~F.text.startswith("/"), F.text | F.caption)
+async def handle_auto_payment_text(message: Message, state: FSMContext, bot: Bot):
     """
-    @humocardbot dan forward qilingan xabarlar yoki SMS matnlarini avtomatik tahlil qilish.
-    Buyruqlar (/) bilan boshlanmagan xabarlardan summani aniqlaydi.
+    @humocardbot dan kelgan, forward qilingan yoki SMS matnlarini har qanday FSM holatida avtomatik tahlil qilish.
     """
     raw_text = message.text or message.caption or ""
     amount = extract_payment_amount(raw_text)
@@ -633,12 +626,12 @@ async def handle_auto_payment_text(message: Message, bot: Bot):
 
     vacancy = find_vacancy_by_exact_amount(amount)
     if not vacancy:
-        # Bunday summali kutilayotgan vakansiya yo'q
         return
 
     vacancy_id = vacancy["id"]
+    await state.clear()
 
-    # Avtomatik tasdiqlash!
+    # Avtomatik tasdiqlash
     update_vacancy(
         vacancy_id,
         status="queued",
@@ -652,21 +645,31 @@ async def handle_auto_payment_text(message: Message, bot: Bot):
 
     queue_count = get_queue_count()
 
-    # Foydalanuvchiga bir zumda xabar
+    # AGAR KANALDA NAVBAT BO'SH BO'LSA (post yo'q bo'lsa), "Hozir yuborish" tugmasi qo'shiladi!
+    user_buttons = []
+    if queue_count <= 1:
+        user_buttons.append([InlineKeyboardButton(text="🚀 Hozir kanalga chiqarish", callback_data=f"user_post_now_{vacancy_id}")])
+    user_buttons.append([InlineKeyboardButton(text="🏠 Bosh menyu", callback_data="main_menu")])
+
     try:
+        queue_info = "Navbatda hech kim yo'q! E'loningizni hoziroq chiqarishingiz mumkin." if queue_count <= 1 else f"Hozir navbatda: {queue_count} ta e'lon."
         await bot.send_message(
             chat_id=vacancy["user_id"],
             text=f"⚡️ <b>TO'LOV AVTOMATIK TASDIQLANDI!</b>\n\n"
                  f"📌 E'lon raqami: <code>#{vacancy_id}</code>\n"
                  f"💰 Qabul qilingan summa: <b>{amount:,} UZS</b>\n"
-                 f"📋 E'loningiz muvaffaqiyatli navbatga qo'yildi (Hozir navbatda: {queue_count} ta)!\n\n"
-                 f"🚀 Belgilangan vaqt oralig'ida kanallarga avtomatik chiqariladi.",
-            parse_mode="HTML"
+                 f"📋 {queue_info}\n\n"
+                 f"Quyidagi tugma orqali darhol kanalga chiqarishingiz mumkin 👇",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=user_buttons)
         )
     except Exception as e:
         logger.error(f"Foydalanuvchiga avto to'lov xabarini yetkazishda xatolik: {e}")
 
-    # Adminlarga bildirishnoma
+    # Adminlarga bildirishnoma (Hozir chiqarish tugmasi bilan)
+    admin_buttons = [
+        [InlineKeyboardButton(text="🚀 Hozir kanalga chiqarish", callback_data=f"admin_post_now_btn_{vacancy_id}")]
+    ]
     for admin_id in ADMIN_IDS:
         try:
             await bot.send_message(
@@ -676,14 +679,52 @@ async def handle_auto_payment_text(message: Message, bot: Bot):
                      f"👤 User: <code>{vacancy['user_id']}</code>\n"
                      f"💰 Summa: <b>{amount:,} UZS</b>\n"
                      f"🏢 Kompaniya: {vacancy.get('company_name', '—')}\n"
-                     f"📋 Navbatga qo'yildi.",
-                parse_mode="HTML"
+                     f"📋 Navbatda: {queue_count} ta",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=admin_buttons)
             )
         except Exception:
             pass
 
     log_event("auto_payment_success", vacancy["user_id"], vacancy_id, {"amount": amount})
     await message.reply(f"✅ <b>To'lov avtomatik aniqlandi va tasdiqlandi!</b> (E'lon #{vacancy_id})", parse_mode="HTML")
+
+
+# ==================== HOZIR YUBORISH (DARHOL JOYLASH) HANDLERLARI ====================
+
+@router.callback_query(F.data.startswith("user_post_now_"))
+async def user_post_now_action(callback: CallbackQuery, bot: Bot):
+    """Foydalanuvchi yoki admin navbat bo'sh bo'lganda 'Hozir kanalga chiqarish' tugmasini bosganda."""
+    vacancy_id = int(callback.data.replace("user_post_now_", ""))
+    scheduler = PostScheduler(bot)
+    res = await scheduler.post_immediately(vacancy_id)
+
+    if res:
+        await callback.message.edit_text(
+            f"🎉 <b>E'loningiz #{vacancy_id} muvaffaqiyatli barcha kanallarga joylashtirildi!</b>",
+            parse_mode="HTML",
+            reply_markup=back_to_menu_kb()
+        )
+        await callback.answer("✅ Kanalga chiqarildi!")
+    else:
+        await callback.answer("⚠️ E'lonni chiqarishda xatolik yuz berdi.", show_alert=True)
+
+
+@router.callback_query(F.data.startswith("admin_post_now_btn_"))
+async def admin_post_now_btn_action(callback: CallbackQuery, bot: Bot):
+    """Admin 'Hozir kanalga chiqarish' tugmasini bosganda."""
+    vacancy_id = int(callback.data.replace("admin_post_now_btn_", ""))
+    scheduler = PostScheduler(bot)
+    res = await scheduler.post_immediately(vacancy_id)
+
+    if res:
+        await callback.message.edit_text(
+            callback.message.text + f"\n\n🚀 <b>DARHOL KANALGA CHIQARILDI!</b> ({callback.from_user.full_name})",
+            parse_mode="HTML"
+        )
+        await callback.answer("✅ Kanalga chiqarildi!")
+    else:
+        await callback.answer("❌ Joylashda xatolik!", show_alert=True)
 
 
 # ==================== MENING E'LONLARIM ====================
