@@ -53,8 +53,8 @@ PAYMENT_PHONE = os.getenv("PAYMENT_PHONE", "+998901234567")
 PAYMENT_CHECK_MODE = os.getenv("PAYMENT_CHECK_MODE", "manual")
 
 # ==================== E'LON SOZLAMALARI ====================
-# E'lon navbati - har necha daqiqada bir e'lon joylanadi
-POST_INTERVAL_MINUTES = int(os.getenv("POST_INTERVAL_MINUTES", "30"))
+# E'lon navbati - har necha daqiqada bir e'lon joylanadi (5-10 daqiqa)
+POST_INTERVAL_MINUTES = int(os.getenv("POST_INTERVAL_MINUTES", "5"))
 
 # E'lon joylash vaqti oralig'i (soat)
 POST_START_HOUR = int(os.getenv("POST_START_HOUR", "8"))
