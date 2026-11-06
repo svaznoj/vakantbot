@@ -1,34 +1,19 @@
-"""Vakansiya e'lonini premium hashamatli ko'rinishda formatlash."""
+"""Vakansiya e'lonini haqiqiy Telegram Premium Custom Emojilar bilan formatlash."""
 import json
 from database import get_setting, get_posting_channels
+from config_emojis import CUSTOM_EMOJI_IDS
 
-# Premium estetik emojilar va belgilar
-ICONS = {
-    "star": "⭐",
-    "fire": "🔥",
-    "pin": "📍",
-    "briefcase": "💼",
-    "company": "🏢",
-    "team": "👥",
-    "money": "💵",
-    "clock": "⏳",
-    "phone": "📲",
-    "doc": "📝",
-    "info": "📌",
-    "rocket": "🚀",
-    "check": "✅",
-    "cross": "❌",
-    "card": "💳",
-    "warning": "⚠️",
-    "bell": "🔔",
-    "sparkles": "✨",
-    "diamond": "💎",
-    "crown": "👑",
-}
+
+def em(key: str, fallback: str) -> str:
+    """Telegram Premium Custom Emoji HTML tegi."""
+    eid = CUSTOM_EMOJI_IDS.get(key, "").strip()
+    if eid:
+        return f'<tg-emoji emoji-id="{eid}">{fallback}</tg-emoji>'
+    return fallback
 
 
 def format_vacancy(data: dict) -> str:
-    """Vakansiya e'lonini chiroyli va hashamatli formatda tayyorlash."""
+    """Vakansiya e'lonini hashamatli formatda tayyorlash."""
 
     # Agar foydalanuvchi tayyor reklama yuborgan bo'lsa
     if data.get("company_name") == "Tayyor reklama" and data.get("formatted_text"):
@@ -44,34 +29,32 @@ def format_vacancy(data: dict) -> str:
     requirements = data.get('requirements')
     additional_info = data.get('additional_info')
 
-    text = f"""👑 <b>ISh O'RNI: {job_type.upper()}</b>
+    text = f"""{em('menu_new_post', '✨')} <b>ISh O'RNI: {job_type.upper()}</b>
 
-💎 <b>Kompaniya:</b> <code>{company}</code>
-💼 <b>Vakansiya:</b> {job_type}
+{em('menu_channels', '🏢')} <b>Kompaniya:</b> <code>{company}</code>
+{em('mode_wizard', '💼')} <b>Vakansiya:</b> {job_type}
 👥 <b>Kerakli xodimlar:</b> {workers}
-💵 <b>Oylik maosh:</b> <b>{salary}</b>
-⏳ <b>Ish tartibi:</b> {schedule}
+{em('menu_prices', '💰')} <b>Oylik maosh:</b> <b>{salary}</b>
+{em('admin_queue', '⏳')} <b>Ish tartibi:</b> {schedule}
 📍 <b>Manzil:</b> {address}
-📲 <b>Bog'lanish:</b> <code>{phone}</code>"""
+{em('menu_contact', '📞')} <b>Bog'lanish:</b> <code>{phone}</code>"""
 
     if requirements:
-        text += f"""\n\n📝 <b>Talablar:</b>\n{requirements}"""
+        text += f"""\n\n{em('mode_wizard', '📝')} <b>Talablar:</b>\n{requirements}"""
 
     if additional_info:
-        text += f"""\n\n📌 <b>Qo'shimcha ma'lumot:</b>\n{additional_info}"""
+        text += f"""\n\n{em('menu_channels', '📌')} <b>Qo'shimcha ma'lumot:</b>\n{additional_info}"""
 
-    text += f"""\n\n━━━━━━━━━━━━━━━━━━━━━━\n🚀 <i>Murojaat uchun yuqoridagi raqamga qo'ng'iroq qiling yoki yozing!</i>"""
+    text += f"""\n\n━━━━━━━━━━━━━━━━━━━━━━\n{em('action_post_now', '🚀')} <i>Murojaat uchun yuqoridagi raqamga qo'ng'iroq qiling yoki yozing!</i>"""
 
     return text.strip()
 
 
 def format_vacancy_for_channel(data: dict) -> str:
-    """Kanalga chiqariladigan e'lon formati."""
     return format_vacancy(data)
 
 
 def format_vacancy_preview(data: dict, selected_channels: list) -> str:
-    """Foydalanuvchiga e'lonni tasdiqlash uchun ko'rsatish."""
     vacancy_text = format_vacancy(data)
     channels_dict = get_posting_channels(only_active=False)
 
@@ -80,13 +63,13 @@ def format_vacancy_preview(data: dict, selected_channels: list) -> str:
         if key in channels_dict:
             ch = channels_dict[key]
             price_formatted = f"{ch['price']:,}".replace(",", " ")
-            channels_info += f"  📢 <b>{ch['name']}</b> — {price_formatted} UZS\n"
+            channels_info += f"  {em('menu_channels', '📢')} <b>{ch['name']}</b> — {price_formatted} UZS\n"
 
     exact_amount = data.get("exact_amount") or data.get("total_price") or 0
     exact_formatted = f"{exact_amount:,}".replace(",", " ")
 
-    photo_status = "🖼 O'z rasmingiz biriktirilgan" if data.get("photo_file_id") else (
-        "🖼 Umumiy kanal banneri qo'yiladi" if data.get("use_default_photo") else "📄 Faqat matnli e'lon"
+    photo_status = f"{em('photo_custom', '📸')} O'z rasmingiz biriktirilgan" if data.get("photo_file_id") else (
+        f"{em('photo_default', '🖼')} Umumiy kanal banneri qo'yiladi" if data.get("use_default_photo") else f"{em('photo_skip', '📄')} Faqat matnli e'lon"
     )
 
     text = f"""👁 <b>E'LON KO'RINIShI (PREVIEW):</b>
@@ -96,28 +79,25 @@ def format_vacancy_preview(data: dict, selected_channels: list) -> str:
 ━━━━━━━━━━━━━━━━━━━━━━
 {photo_status}
 
-📢 <b>Tanlangan kanallar:</b>
+{em('menu_channels', '📢')} <b>Tanlangan kanallar:</b>
 {channels_info if channels_info else '  <i>(Hech qanday kanal tanlanmagan)</i>'}
-💳 <b>To'lov summasi:</b> <b>{exact_formatted} UZS</b>
+{em('admin_pending', '💳')} <b>To'lov summasi:</b> <b>{exact_formatted} UZS</b>
 
-✅ <i>Hammasi to'g'ri bo'lsa, tasdiqlang yoki tahrirlang:</i>"""
+{em('action_confirm', '✅')} <i>Hammasi to'g'ri bo'lsa, tasdiqlang yoki tahrirlang:</i>"""
 
     return text.strip()
 
 
 def format_payment_info(exact_amount: int, vacancy_id: int) -> str:
-    """
-    To'lov ma'lumotlari: @humocardbot orqali avto to'lov va unikal summa.
-    """
     card = get_setting("payment_card", "8600 0000 0000 0000")
     holder = get_setting("payment_holder", "ADMIN")
     exact_formatted = f"{exact_amount:,}".replace(",", " ")
 
-    text = f"""💳 <b>TO'LOV VA AVTOMATIK TEKSHIRUV</b>
+    text = f"""{em('admin_pending', '💳')} <b>TO'LOV VA AVTOMATIK TEKSHIRUV</b>
 
 📌 E'lon raqami: <code>#{vacancy_id}</code>
 
-⚡️ <b>O'TKAZISHINGIZ KERAK BO'LGAN ANIQ SUMMA:</b>
+{em('action_check_pay', '⚡️')} <b>O'TKAZISHINGIZ KERAK BO'LGAN ANIQ SUMMA:</b>
 👉 <b><code>{exact_amount}</code></b> so'm (<code>{exact_formatted} UZS</code>)
 
 ⚠️ <b>DIQQAT! TO'LOV AVTO TASDIQLANISHI UCHUN:</b>
@@ -125,7 +105,7 @@ Aynan <b><code>{exact_amount}</code> so'm</b> o'tkazishingiz shart!
 <i>(Tizim ushbu unikal summa orqali to'lovingizni 100% avtomatik aniqlaydi!)</i>
 
 ━━━━━━━━━━━━━━━━━━━━━━
-💳 <b>Karta raqami:</b>
+{em('admin_pending', '💳')} <b>Karta raqami:</b>
 <code>{card}</code>
 
 👤 <b>Qabul qiluvchi:</b> {holder}
@@ -140,18 +120,17 @@ Aynan <b><code>{exact_amount}</code> so'm</b> o'tkazishingiz shart!
 
 
 def format_admin_notification(vacancy: dict, user_info: dict) -> str:
-    """Admin uchun to'lov xabarnomasi."""
     channels_dict = get_posting_channels(only_active=False)
     channels_text = ""
     ch_keys = json.loads(vacancy["channels"]) if isinstance(vacancy["channels"], str) else vacancy.get("channels", [])
     for key in ch_keys:
         if key in channels_dict:
-            channels_text += f"  📢 {channels_dict[key]['name']}\n"
+            channels_text += f"  {em('menu_channels', '📢')} {channels_dict[key]['name']}\n"
 
     exact_amount = vacancy.get('exact_amount', vacancy.get('total_price', 0))
     price_formatted = f"{exact_amount:,}".replace(",", " ")
 
-    text = f"""🔔 <b>YANGI TO'LOV CHEKI / HARAKATI!</b>
+    text = f"""{em('admin_broadcast', '🔔')} <b>YANGI TO'LOV CHEKI / HARAKATI!</b>
 
 📌 E'lon: <code>#{vacancy['id']}</code>
 👤 Foydalanuvchi: {user_info.get('full_name', '—')} (@{user_info.get('username', '—')})
@@ -168,10 +147,9 @@ def format_admin_notification(vacancy: dict, user_info: dict) -> str:
 
 
 def format_stats(stats: dict) -> str:
-    """Statistikani chiroyli ko'rsatish."""
     revenue_formatted = f"{stats.get('total_revenue', 0):,}".replace(",", " ")
 
-    text = f"""📊 <b>BOTNING MUKAMMAL STATISTIKASI</b>
+    text = f"""{em('admin_stats', '📊')} <b>BOTNING MUKAMMAL STATISTIKASI</b>
 
 👥 <b>Jami foydalanuvchilar:</b> {stats.get('total_users', 0)} ta
 📢 <b>Faol majburiy kanallar:</b> {stats.get('mandatory_channels_count', 0)} ta
