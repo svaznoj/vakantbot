@@ -87,6 +87,19 @@ async def show_main_menu(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer()
 
 
+@router.message(Command("myid"))
+@router.message(Command("id"))
+async def cmd_myid(message: Message):
+    """Foydalanuvchining Telegram ID raqamini ko'rsatish."""
+    await message.answer(
+        f"👤 <b>Sizning ma'lumotlaringiz:</b>\n\n"
+        f"🆔 Telegram ID: <code>{message.from_user.id}</code>\n"
+        f"👤 Ism: {message.from_user.full_name}\n\n"
+        f"💡 <i>Admin huquqini olish uchun ushbu ID raqamni Railway Variables dagi <code>ADMIN_IDS</code> ga kiriting.</i>",
+        parse_mode="HTML"
+    )
+
+
 @router.callback_query(F.data == "show_channels")
 async def show_channels(callback: CallbackQuery):
     """Faol kanallar ro'yxatini ko'rsatish."""

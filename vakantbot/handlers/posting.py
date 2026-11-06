@@ -620,11 +620,11 @@ async def process_receipt_photo(message: Message, state: FSMContext, bot: Bot):
 
 # ==================== @humocardbot VA TO'LOV BILDIRIShNOMALARI (AVTO USHLASH) ====================
 
-@router.message(F.text | F.caption)
+@router.message(~F.text.startswith("/"), F.text | F.caption)
 async def handle_auto_payment_text(message: Message, bot: Bot):
     """
     @humocardbot dan forward qilingan xabarlar yoki SMS matnlarini avtomatik tahlil qilish.
-    Agar xabarda aniq summa (masalan, 1003 yoki 50003) topilsa, o'sha vakansiyani 100% AVTO tasdiqlaydi!
+    Buyruqlar (/) bilan boshlanmagan xabarlardan summani aniqlaydi.
     """
     raw_text = message.text or message.caption or ""
     amount = extract_payment_amount(raw_text)
